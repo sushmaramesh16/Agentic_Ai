@@ -1,14 +1,24 @@
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from ingest import ingest_documents, FINANCIAL_DOCS
 
 def retrieve_documents(query: str, n_results: int = 3) -> list[str]:
     embedding_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
     client = chromadb.PersistentClient(path="data/chroma_db")
-    collection = client.get_collection(
+
+    collection = client.get_or_create_collection(
         name="financial_guidelines",
         embedding_function=embedding_fn
     )
+
+    if collection.count() == 0:
+        print("⚠️ Collection empty — ingesting documents...")
+        collection.add(
+            documents=FINANCIAL_DOCS,
+            ids=[f"doc_{i}" for i in range(len(FINANCIAL_DOCS))]
+        )
+
     results = collection.query(query_texts=[query], n_results=n_results)
     docs = results["documents"][0]
-    print(f"📚 Retrieved {len(docs)} relevant documents from ChromaDB")
+    print(f"�� Retrieved {len(docs)} relevant documents from ChromaDB")
     return docs
